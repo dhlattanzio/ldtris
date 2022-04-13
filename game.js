@@ -51,17 +51,20 @@ class Game {
 
     createBlock() {
         const blocks = {
-            0: new Block([[0, 0], [1, 0], [0, 1], [1, 1]]), // O
-            1: new Block([[0, 0], [0, 1], [0, 2], [0, 3]]), // I
-            2: new Block([[1, 0], [2, 0], [0, 1], [1, 1]]), // S
-            3: new Block([[0, 0], [1, 0], [1, 1], [2, 1]]), // Z
-            4: new Block([[0, 0], [0, 1], [0, 2], [1, 2]]), // L
-            5: new Block([[1, 0], [1, 1], [0, 2], [1, 2]]), // J
-            6: new Block([[0, 1], [1, 1], [2, 1], [1, 0]])  // T
+            0: () => new Block([[0, 0], [1, 0], [0, 1], [1, 1]]), // O
+            1: () => new Block([[0, 0], [0, 1], [0, 2], [0, 3]]), // I
+            2: () => new Block([[1, 0], [2, 0], [0, 1], [1, 1]]), // S
+            3: () => new Block([[0, 0], [1, 0], [1, 1], [2, 1]]), // Z
+            4: () => new Block([[0, 0], [0, 1], [0, 2], [1, 2]]), // L
+            5: () => new Block([[1, 0], [1, 1], [0, 2], [1, 2]]), // J
+            6: () => new Block([[0, 1], [1, 1], [2, 1], [1, 0]])  // T
         }
         const randomNumber = Math.floor(Math.random() * Object.keys(blocks).length);
+        const randomColor = Math.floor(Math.random() * 7);
 
-        return blocks[randomNumber];
+        const newBlock = blocks[randomNumber]();
+        newBlock.color = randomColor;
+        return newBlock;
     }
 
     nextBlock() {
@@ -73,6 +76,7 @@ class Game {
 
     draw() {
         const deltaTime = 1.0 / 60.0;
+        let tileColor = 0;
 
         this.ctx.fillStyle = "lightgray";
         this.ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -90,8 +94,10 @@ class Game {
                     size, size
                 );
 
-                if (this.board.tiles[y][x] > 0) {
+                tileColor = this.board.tiles[y][x];
+                if (tileColor > 0) {
                     this.ctx.drawImage(image,
+                        16 * tileColor, 0, 16, 16,
                         x * size, blockY,
                         size, size);
                 }
@@ -100,7 +106,10 @@ class Game {
 
         // current block
         for(const tile of this.block.tiles) {
+            tileColor = this.block.color;
+
             this.ctx.drawImage(image,
+                16 * tileColor, 0, 16, 16,
                 (this.block.x + tile[0]) * size,
                 ((this.board.rows - 1 + tile[1]) * size) - (this.block.y * size),
                 BLOCK_SIZE, BLOCK_SIZE);
@@ -116,7 +125,7 @@ class Game {
                 // TODO
             }
 
-            this.downTime = 0.6;
+            this.downTime = 0.1;
         }
 
         setTimeout(() => requestAnimationFrame(this.draw.bind(this)), 17);
@@ -140,7 +149,7 @@ class Board {
     putBlock(block) {
         console.log("put", block);
         for(const tile of block.tiles) {
-            this.tiles[block.y - tile[1]][tile[0] + block.x] = 1;
+            this.tiles[block.y - tile[1]][tile[0] + block.x] = block.color;
         }
     }
 }
@@ -152,6 +161,7 @@ class Block {
         this.width = 1;
         this.height = 1;
         this.tiles = tiles;
+        this.color = 0;
         this.updateSize();
     }
 
