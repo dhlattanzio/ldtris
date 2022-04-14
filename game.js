@@ -24,7 +24,7 @@ class Game {
     }
 
     moveBlock(move) {
-        this.block.x = Math.min(Math.max(this.block.x + move, 0), this.board.cols - this.block.width);
+        this.block.x = Math.min(Math.max(this.block.x + move, -this.block.offsetX), this.board.cols - this.block.width );
     }
 
     rotateBlock(dir) {
@@ -137,8 +137,8 @@ class Game {
 
         tileColor = this.block.color - 1;
         const tiles = this.block.getTiles();
-        for(let y=0;y<this.block.height;y++) {
-            for(let x=0;x<this.block.width;x++) {
+        for(let y=0;y<this.block.height+this.block.offsetY;y++) {
+            for(let x=0;x<this.block.width+this.block.offsetX;x++) {
                 if (tiles[y][x] == 0) continue;
 
                 this.ctx.drawImage(image,
@@ -175,17 +175,25 @@ class Board {
     }
 
     overlap(block) {
-        for(const tile of block.tiles) {
-            const y = block.y - tile[1];
-            if (y < 0 || this.tiles[y][tile[0] + block.x] > 0) return true;
+        const tiles = block.getTiles();
+        for(let y=0;y<block.height+block.offsetY;y++) {
+            for(let x=0;x<block.width+block.offsetX;x++) {
+                if (tiles[y][x] == 0) continue;
+                const ty = block.y - y;
+                console.log(tiles, x, y, ty);
+                if (ty < 0 || this.tiles[ty][x + block.x] > 0) return true;
+            }
         }
         return false;
     }
 
     putBlock(block) {
-        console.log("put", block);
-        for(const tile of block.tiles) {
-            this.tiles[block.y - tile[1]][tile[0] + block.x] = block.color;
+        const tiles = block.getTiles();
+        for(let y=0;y<block.height+block.offsetY;y++) {
+            for(let x=0;x<block.width+block.offsetX;x++) {
+                if (tiles[y][x] == 0) continue;
+                this.tiles[block.y - y][x + block.x] = block.color;
+            }
         }
     }
 }
@@ -206,6 +214,8 @@ class Block {
 
         this.width = 1;
         this.height = 1;
+        this.offsetX = 0;
+        this.offsetY = 0;
         this.updateSize();
     }
 
@@ -227,29 +237,44 @@ class Block {
     rotate(dir) {
         this.currentIndex = (this.allRotations.length + this.currentIndex + dir) % this.allRotations.length;
         console.log("new: ", this.currentIndex);
+        this.updateSize();
     }
 
     updateSize() {
-        /*const size = this.tiles.reduce((acc, tile) => {
-            acc[0] = Math.max(acc[0], tile[0] + 1);
-            acc[1] = Math.max(acc[1], tile[1] + 1);
-            return acc;
-        }, [0, 0]);*/
+        this.width = 0;
+        this.height = 0;
+        this.offsetX = 0;
+        this.offsetY = 0;
 
-        this.width = this.getTiles()[0].length;
-        this.height = this.getTiles().length;
+        this.getTiles().map((value, index) => {
+            const someInX = value.some(x => x > 0);
+            if (!someInX && this.offsetY == index) {
+                this.offsetY += 1;
+            }
+            if (someInX) this.height = index + 1;
+
+            const someInY = this.getTiles().some(x => x[index] > 0);
+            if (!someInY && this.offsetX == index) {
+                this.offsetX += 1;
+            }
+            if (someInY) this.width = index + 1;
+        });
+        this.width -= this.offsetX;
+        this.height -= this.offsetY;
+
+        console.log(this.offsetX, "-", this.offsetY, "-", this.width, "-", this.height);
     }
 
     getLeft() {
-        return this.x;
+        return this.x + this.offsetX;
     }
 
     getRight() {
-        return this.x + this.width;
+        return this.getLeft() + this.width;
     }
 
     getTop() {
-        return this.y;
+        return this.y + this.offsetY;
     }
 
     getBot() {
@@ -275,10 +300,10 @@ document.addEventListener('keydown', event => {
             game.instantDownBlock();
             break
         case "z":
-            game.rotateBlock(-1);
+            game.rotateBlock(1);
             break
         case "x":
-            game.rotateBlock(1);
+            game.rotateBlock(-1);
             break
     }
 })
