@@ -27,7 +27,7 @@ class TetrisRenderer {
         this.skin = skin;
 
         game.subscribe((name, data) => {
-            console.log("event: ", name, data);
+            //console.log("event: ", name, data);
             switch(name) {
                 case "update":
                     this.render();

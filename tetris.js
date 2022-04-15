@@ -88,7 +88,22 @@ class Tetris {
     putBlockInboard() {
         this.canUseHold = true;
         this.board.putBlock(this.block);
+
+        this.checkForLines(this.block.getBot(), this.block.height);
         this.nextBlock();
+    }
+
+    checkForLines(y, height) {
+        const linesComplete = [];
+        for(let i=y+height-1;i>=y;i--) {
+            if (this.board.checkLine(i)) {
+                linesComplete.push(i);
+            }
+        }
+
+        if (linesComplete.length > 0) {
+            this.emit("lines-complete", linesComplete);
+        }
     }
 
     fastDownBlock() {
@@ -97,7 +112,6 @@ class Tetris {
     }
 
     instantDownBlock() {
-        //while(this.downBlock());
         this.block.y = this.currentEndY;
         this.putBlockInboard();
     }
@@ -177,8 +191,14 @@ class Board {
         this.tiles = Array(rows).fill().map(() => Array(cols).fill(0));
     }
 
-    canRotate(block, nextPosition) {
-        dsad
+    checkLine(y) {
+        const line = this.tiles[y];
+        if (line.every(x => x > 0)) {
+            this.tiles.splice(y, 1);
+            this.tiles.push(line.fill(0));
+            return true;
+        }
+        return false;
     }
 
     overlap(block) {
@@ -191,10 +211,8 @@ class Board {
                 if (tx < 0 || tx >= this.cols) return true;
                 if (ty >= this.rows) continue;
 
-                if (ty < 0 || this.tiles[ty][tx] > 0) {
-                    console.log(ty, "?");
+                if (ty < 0 || this.tiles[ty][tx] > 0)
                     return true;
-                }
             }
         }
         return false;
@@ -294,10 +312,10 @@ class Block {
     }
 
     getTop() {
-        return this.y + this.offsetY;
+        return this.getBot() + this.height;
     }
 
     getBot() {
-        return getTop() - this.height;
+        return (this.y + this.offsetY);
     }
 }
