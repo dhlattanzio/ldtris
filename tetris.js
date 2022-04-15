@@ -5,8 +5,10 @@ class Tetris {
         this.downTime = 0.3;
 
         this.currentEndY;
+        this.nextBlocks = [];
 
-        this.nextBlock();
+        this.blockHold = null;
+        this.canUseHold = true;
     }
 
     subscribe(listener) {
@@ -18,6 +20,7 @@ class Tetris {
     }
 
     start() {
+        this.nextBlock();
         this.update();
     }
 
@@ -49,6 +52,27 @@ class Tetris {
         }
     }
 
+    holdBlock() {
+        const prevX = this.block.x;
+        if (this.canUseHold) {
+            if (!this.hold) {
+                this.hold = this.block;
+                this.nextBlock();
+            } else {
+                const tmp = this.hold;
+                this.hold = this.block;
+                this.block = tmp;
+
+                this.block.x = Math.min(Math.max(prevX, this.block.offsetX), this.board.cols - this.block.width);
+                this.block.y = this.board.rows - 1;
+            }
+            this.hold.resetRotation();
+            this.calculateCurrentEndY();
+            this.canUseHold = false;
+            this.emit("block-hold", this.hold);
+        }
+    }
+
     downBlock() {
         const prevY = this.block.y;
         const nextY = this.block.y - 1;
@@ -62,6 +86,7 @@ class Tetris {
     }
 
     putBlockInboard() {
+        this.canUseHold = true;
         this.board.putBlock(this.block);
         this.nextBlock();
     }
@@ -78,23 +103,34 @@ class Tetris {
     }
 
     createBlock() {
-        const blocks = {
-            0: () => new Block([[1, 1], [1, 1]]), // O
-            1: () => new Block([[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]]), // I
-            2: () => new Block([[1, 1, 0], [0, 1, 1]]), // S
-            3: () => new Block([[0, 1, 1], [1, 1, 0]]), // Z
-            4: () => new Block([[0, 0, 0], [1, 1, 1], [1, 0, 0]]), // L
-            5: () => new Block([[1, 0, 0], [1, 1, 1], [0, 0, 0]]), // J
-            6: () => new Block([[0, 1, 0], [1, 1, 1]])  // T
+        if (this.nextBlocks.length <= 1) {
+            const blocks = {
+                0: () => new Block([[1, 1], [1, 1]]), // O
+                1: () => new Block([[0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0], [0, 1, 0, 0]]), // I
+                2: () => new Block([[1, 1, 0], [0, 1, 1]]), // S
+                3: () => new Block([[0, 1, 1], [1, 1, 0]]), // Z
+                4: () => new Block([[0, 0, 0], [1, 1, 1], [1, 0, 0]]), // L
+                5: () => new Block([[1, 0, 0], [1, 1, 1], [0, 0, 0]]), // J
+                6: () => new Block([[0, 1, 0], [1, 1, 1]])  // T
+            }
+    
+            for(let i=0;i<20;i++) {
+                const randomNumber = Math.floor(Math.random() * Object.keys(blocks).length);
+                const newBlock = blocks[randomNumber]();
+                newBlock.type = randomNumber;
+                newBlock.color = 1;
+                this.emit("block_new", newBlock);
+                this.nextBlocks.push(newBlock);
+            }
         }
-        const randomNumber = Math.floor(Math.random() * Object.keys(blocks).length);
 
-        const newBlock = blocks[randomNumber]();
-        newBlock.type = randomNumber;
-        newBlock.color = 1;
+        const block = this.nextBlocks.shift();
+        this.emit("block_change", [block, this.nextBlocks[0]]);
+        return block;
+    }
 
-        this.emit("block_new", newBlock);
-        return newBlock;
+    getNextBlock() {
+        return this.nextBlocks[0];
     }
 
     nextBlock() {
@@ -102,7 +138,6 @@ class Tetris {
         this.block = this.createBlock();
         
         this.block.x = Math.min(Math.max(prevX, this.block.offsetX), this.board.cols - this.block.width);
-
         this.block.y = this.board.rows - 1;
 
         this.calculateCurrentEndY();
@@ -153,9 +188,10 @@ class Board {
                 if (tiles[y][x] == 0) continue;
                 const tx = block.x + x;
                 const ty = block.y + y;
+                if (tx < 0 || tx >= this.cols) return true;
                 if (ty >= this.rows) continue;
 
-                if (tx < 0 || tx >= this.cols || ty < 0 || this.tiles[ty][tx] > 0) {
+                if (ty < 0 || this.tiles[ty][tx] > 0) {
                     console.log(ty, "?");
                     return true;
                 }
@@ -171,13 +207,11 @@ class Board {
                 if (tiles[y][x] == 0) continue;
                 const tx = block.x + x;
                 const ty = block.y + y;
-                //console.log("?", tx, ty, block.offsetX, block.offsetY);
                 if (ty >= this.rows) continue;
 
                 this.tiles[ty][tx] = block.color;
             }
         }
-        console.log(this.tiles);
     }
 }
 
@@ -223,6 +257,11 @@ class Block {
         this.updateSize();
     }
 
+    resetRotation() {
+        this.currentIndex = 0;
+        this.updateSize();
+    }
+
     updateSize() {
         this.width = 0;
         this.height = 0;
@@ -244,9 +283,6 @@ class Block {
         });
         this.width -= this.offsetX;
         this.height -= this.offsetY;
-
-        console.log("new: ", this.getTiles());
-        console.log(this.offsetX, "-", this.offsetY, "-", this.width, "-", this.height);
     }
 
     getLeft() {

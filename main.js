@@ -1,8 +1,10 @@
 const skin = document.getElementById('source');
-const canvas = document.getElementById('canvas');
+const canvas = document.getElementById('canvas-game');
+const canvasBlockNext = document.getElementById('canvas-block-next');
+const canvasBlockHold = document.getElementById('canvas-block-hold');
 
 const tetris = new Tetris();
-const gameRenderer = new TetrisRenderer(tetris, canvas, 32, skin);
+const gameRenderer = new TetrisRenderer(tetris, canvas, 32, skin, canvasBlockNext, canvasBlockHold);
 
 document.addEventListener('keydown', event => {
     const key = (event.key.length == 1) ? event.key.toLowerCase() : event.key;
@@ -25,8 +27,11 @@ document.addEventListener('keydown', event => {
         case "x":
             tetris.rotateBlock(1);
             break
+        case " ":
+            tetris.holdBlock();
+            break
         default:
-            console.log(key);
+            console.log("key: " + key);
             break
     }
 });

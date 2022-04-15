@@ -2,11 +2,8 @@ const BLOCK_SIZE = 32;
 const PADDING = 2;
 const IMAGE_TILE_SIZE = 32;
 
-const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = false;
-
 class TetrisRenderer {
-    constructor(game, canvas, tileSize, skin) {
+    constructor(game, canvas, tileSize, skin, canvasBlockNext, canvasBlockHold) {
         this.game = game;
 
         canvas.width = (game.board.cols * (BLOCK_SIZE + PADDING) + PADDING);
@@ -17,16 +14,32 @@ class TetrisRenderer {
         this.ctx = canvas.getContext("2d");
         this.ctx.imageSmoothingEnabled = false;
 
+        canvasBlockNext.width = (5 * (BLOCK_SIZE + PADDING) + PADDING);
+        canvasBlockNext.height = (5 * (BLOCK_SIZE + PADDING) + PADDING);
+        this.ctxBlockNext = canvasBlockNext.getContext("2d");
+        this.ctxBlockNext.imageSmoothingEnabled = false;
+
+        canvasBlockHold.width = (5 * (BLOCK_SIZE + PADDING) + PADDING);
+        canvasBlockHold.height = (5 * (BLOCK_SIZE + PADDING) + PADDING);
+        this.ctxBlockHold = canvasBlockHold.getContext("2d");
+        this.ctxBlockHold.imageSmoothingEnabled = false;
+
         this.skin = skin;
 
         game.subscribe((name, data) => {
-            console.log("event: ", name);
+            console.log("event: ", name, data);
             switch(name) {
                 case "update":
                     this.render();
                     break
                 case "block_new":
                     data.color = 1 + Math.floor(Math.random() * 7);
+                    break
+                case "block_change":
+                    this.drawBlockInContainer(this.ctxBlockNext, data[1]);
+                    break
+                case "block-hold":
+                    this.drawBlockInContainer(this.ctxBlockHold, data);
                     break
                 case "block_move":
                     break;
@@ -71,31 +84,36 @@ class TetrisRenderer {
         }
 
         // Current block
-        this.drawTiles(block.getTiles(),
+        this.drawTiles(this.ctx, block.getTiles(),
         block.x * size + PADDING,
         (board.rows - block.y - 1) * size + PADDING,
         BLOCK_SIZE, block.color - 1, PADDING);
 
         // Curent block - end position
         this.ctx.globalAlpha = 0.2;
-        this.drawTiles(block.getTiles(),
+        this.drawTiles(this.ctx, block.getTiles(),
         block.x * size + PADDING,
         (board.rows - this.game.currentEndY - 1) * size + PADDING,
         BLOCK_SIZE, block.color - 1, PADDING);
         this.ctx.globalAlpha = 1.0;
     }
 
-    drawTiles(tiles, x, y, size, color, padding = 0) {
+    drawTiles(ctx, tiles, x, y, size, color, padding = 0) {
         for(let i=0; i<tiles.length; i++) {
             for(let j=0; j<tiles[i].length; j++) {
                 if (tiles[i][j] == 0) continue;
 
-                this.ctx.drawImage(this.skin,
+                ctx.drawImage(this.skin,
                     IMAGE_TILE_SIZE * color, 0, IMAGE_TILE_SIZE, IMAGE_TILE_SIZE,
                     x + (j * (size + padding)),
                     y - (i * (size + padding)),
                     size, size);
                 }
         }
+    }
+
+    drawBlockInContainer(ctx, block) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        this.drawTiles(ctx, block.getTiles(), 30, 80, BLOCK_SIZE, block.color - 1, PADDING);
     }
 }

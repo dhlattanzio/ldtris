@@ -8,9 +8,23 @@
     <title>Document</title>
 </head>
 <body>
-    <canvas id="canvas" width="10" height="20">
+    <div class="game-container">
+        <div class="game-main">
+            <canvas id="canvas-game"></canvas>
+        </div>
+        <div class="game-info">
+            <h1>Tetris</h1>
+            <h3>Next</h3>
+            <div class="game-info-next">
+                <canvas id="canvas-block-next"></canvas>
+            </div>
+            <h3>Hold</h3>
+            <div class="game-info-hold">
+                <canvas id="canvas-block-hold"></canvas>
+            </div>
+        </div>
+    </div>
 
-    </canvas>
 
     <div style="display:none;">
         <img id="source"
