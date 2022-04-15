@@ -2,7 +2,7 @@ const BLOCK_SIZE = 32;
 const PADDING = 2;
 const IMAGE_TILE_SIZE = 32;
 
-class TetrisRenderer {
+class LDTrisRenderer {
     constructor(game, canvas, tileSize, skin, canvasBlockNext, canvasBlockHold) {
         this.game = game;
 

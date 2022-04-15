@@ -1,4 +1,4 @@
-class Tetris {
+class LDTris {
     constructor(cols = 10, rows = 20) {
         this._subscribers = [];
         this.board = new Board(cols, rows);
@@ -192,6 +192,8 @@ class Board {
     }
 
     checkLine(y) {
+        if (y >= this.tiles.length) return false;
+
         const line = this.tiles[y];
         if (line.every(x => x > 0)) {
             this.tiles.splice(y, 1);

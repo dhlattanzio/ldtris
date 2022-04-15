@@ -3,32 +3,32 @@ const canvas = document.getElementById('canvas-game');
 const canvasBlockNext = document.getElementById('canvas-block-next');
 const canvasBlockHold = document.getElementById('canvas-block-hold');
 
-const tetris = new Tetris();
-const gameRenderer = new TetrisRenderer(tetris, canvas, 32, skin, canvasBlockNext, canvasBlockHold);
+const ldtris = new LDTris();
+const gameRenderer = new LDTrisRenderer(ldtris, canvas, 32, skin, canvasBlockNext, canvasBlockHold);
 
 document.addEventListener('keydown', event => {
     const key = (event.key.length == 1) ? event.key.toLowerCase() : event.key;
     switch(key) {
         case "ArrowRight":
-            tetris.moveBlock(1);
+            ldtris.moveBlock(1);
             break
         case "ArrowLeft":
-            tetris.moveBlock(-1);
+            ldtris.moveBlock(-1);
             break
         case "ArrowDown":
-            tetris.fastDownBlock();
+            ldtris.fastDownBlock();
             break
         case "ArrowUp":
-            tetris.instantDownBlock();
+            ldtris.instantDownBlock();
             break
         case "z":
-            tetris.rotateBlock(-1);
+            ldtris.rotateBlock(-1);
             break
         case "x":
-            tetris.rotateBlock(1);
+            ldtris.rotateBlock(1);
             break
         case " ":
-            tetris.holdBlock();
+            ldtris.holdBlock();
             break
         default:
             console.log("key: " + key);
@@ -36,4 +36,4 @@ document.addEventListener('keydown', event => {
     }
 });
 
-tetris.start();
+ldtris.start();
