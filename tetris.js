@@ -1,30 +1,35 @@
-const BOARD_WIDTH = 10;
-const BOARD_HEIGHT = 20;
-const BLOCK_SIZE = 32;
-const PADDING = 2;
-
-const canvas = document.getElementById('canvas');
-canvas.width = (BOARD_WIDTH * (BLOCK_SIZE + PADDING) + PADDING);
-canvas.height = (BOARD_HEIGHT * (BLOCK_SIZE + PADDING) + PADDING);
-canvas.style.width = (BOARD_WIDTH * (BLOCK_SIZE + PADDING)) + "px";
-canvas.style.height = (BOARD_HEIGHT * (BLOCK_SIZE + PADDING)) + "px";
-
-const ctx = canvas.getContext("2d");
-ctx.imageSmoothingEnabled = false;
-
-const image = document.getElementById('source');
-
-class Game {
-    constructor(ctx) {
-        this.ctx = ctx;
-        this.board = new Board(10, 20);
+class Tetris {
+    constructor(cols = 10, rows = 20) {
+        this._subscribers = [];
+        this.board = new Board(cols, rows);
         this.downTime = 0.3;
 
         this.nextBlock();
     }
 
+    subscribe(listener) {
+        this._subscribers.push(listener);
+    }
+
+    emit(name, data) {
+        this._subscribers.map(sub => sub(name, data));
+    }
+
+    start() {
+        this.update();
+    }
+
+    pause() {
+
+    }
+
+    resume() {
+    }
+
     moveBlock(move) {
-        this.block.x = Math.min(Math.max(this.block.x + move, -this.block.offsetX), this.board.cols - this.block.width );
+        //this.block.x = Math.min(Math.max(this.block.x + move, -this.block.offsetX), this.board.cols - this.block.width );
+        this.block.x += move;
+        if (this.board.overlap(this.block)) this.block.x -= move;
     }
 
     rotateBlock(dir) {
@@ -33,7 +38,7 @@ class Game {
 
     downBlock() {
         const prevY = this.block.y;
-        const nextY = Math.max(this.block.height - 1, this.block.y - 1);
+        const nextY = this.block.y - 1;
 
         this.block.y = nextY;
         if (this.board.overlap(this.block)) {
@@ -43,28 +48,19 @@ class Game {
         return prevY != this.block.y;
     }
 
+    putBlockInboard() {
+        this.board.putBlock(this.block);
+        this.nextBlock();
+    }
+
     fastDownBlock() {
         const stepDown = this.downBlock();
-        if (!stepDown) {
-            this.board.putBlock(this.block);
-            this.nextBlock();
-            // TODO
-        }
+        if (!stepDown) this.putBlockInboard();
     }
 
     instantDownBlock() {
-        console.log("instant!");
-
-        const prevY = this.block.y;
-        for(let y=this.block.y;y>=0;y--) {
-            this.block.y = y;
-            if (this.board.overlap(this.block) || y == 0) {
-                this.block.y += 1;
-                this.board.putBlock(this.block);
-                this.nextBlock();
-                break;
-            }
-        }
+        while(this.downBlock());
+        this.putBlockInboard();
     }
 
     createBlock() {
@@ -86,68 +82,39 @@ class Game {
     }
 
     nextBlock() {
-        const prevX = this.block != null ? this.block.x : 0;
+        const prevX = this.block != null ? this.block.x : 4;
         this.block = this.createBlock();
-        this.block.x = prevX;
+        
+        this.block.x = Math.min(Math.max(prevX, this.block.offsetX), this.board.cols - this.block.width);
+
         this.block.y = this.board.rows - 1;
     }
 
-    draw() {
-        const deltaTime = 1.0 / 60.0;
-        let tileColor = 0;
-
-        this.ctx.fillStyle = "#1e1e1e";
-        this.ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // all board
-        const size = (BLOCK_SIZE + PADDING);
-        for(let y=0;y<this.board.rows;y++) {
-            let blockY = (this.board.rows - y - 1) * size;
-            for(let x=0;x<this.board.cols;x++) {
-                this.ctx.fillStyle = "#121212";
-                this.ctx.lineWidth = 1;
-                this.ctx.fillRect(
-                    x * size + PADDING,
-                    blockY + PADDING,
-                    BLOCK_SIZE, BLOCK_SIZE
-                );
-
-                tileColor = this.board.tiles[y][x];
-                if (tileColor > 0) {
-                    tileColor -= 1;
-                    this.ctx.drawImage(image,
-                        16 * tileColor, 0, 16, 16,
-                        x * size + PADDING, blockY + PADDING,
-                        BLOCK_SIZE, BLOCK_SIZE);
-                }
+    update(delta = 0.017) {
+        this.downTime -= 0.017;
+        if (this.downTime <= 0) {
+            const stepDown = this.downBlock();
+            if (!stepDown) {
+                this.board.putBlock(this.block);
+                this.nextBlock();
+                // TODO
             }
+
+            this.downTime = 10.5;
         }
 
-        // current block
-        /*for(const tile of this.block.tiles) {
-            tileColor = this.block.color - 1;
+        //requestAnimationFrame(this.draw.bind(this));
+        this.emit("update");
+        setTimeout(() => requestAnimationFrame(this.update.bind(this)), 17);
+    }
+    
+    draw() {
+        this.drawBlockInBoard(
+            this.block,
+            this.board,
+        )
 
-            this.ctx.drawImage(image,
-                16 * tileColor, 0, 16, 16,
-                (this.block.x + tile[0]) * size + PADDING,
-                ((this.board.rows - 1 + tile[1]) * size) - (this.block.y * size) + PADDING,
-                BLOCK_SIZE, BLOCK_SIZE);
-        }*/
-
-
-        tileColor = this.block.color - 1;
-        const tiles = this.block.getTiles();
-        for(let y=0;y<this.block.height+this.block.offsetY;y++) {
-            for(let x=0;x<this.block.width+this.block.offsetX;x++) {
-                if (tiles[y][x] == 0) continue;
-
-                this.ctx.drawImage(image,
-                    16 * tileColor, 0, 16, 16,
-                    (this.block.x + x) * size + PADDING,
-                    ((this.board.rows - 1 + y) * size) - (this.block.y * size) + PADDING,
-                    BLOCK_SIZE, BLOCK_SIZE);
-                }
-        }
+        this.drawTiles(this.block.getTiles(), PADDING, PADDING, BLOCK_SIZE, 1, PADDING);
 
         // tmp: down block every x time
         this.downTime -= deltaTime;
@@ -165,6 +132,46 @@ class Game {
         //requestAnimationFrame(this.draw.bind(this));
         setTimeout(() => requestAnimationFrame(this.draw.bind(this)), 17);
     }
+
+    drawBlockInBoard(block, board) {
+        const tiles = block.getTiles();
+        this.drawTiles(tiles,
+            block.x * BLOCK_SIZE + PADDING,
+            (board.rows - block.y - 1) * BLOCK_SIZE + PADDING,
+            BLOCK_SIZE,
+            block.color - 1,
+            PADDING);
+    }
+
+    drawTiles(tiles, x, y, size, color, padding = 0) {
+        for(let i=0; i<tiles.length; i++) {
+            for(let j=0; j<tiles[i].length; j++) {
+                if (tiles[i][j] == 0) continue;
+
+                this.ctx.drawImage(image,
+                    16 * color, 0, 16, 16,
+                    x + (j * (size + padding)),
+                    y - (i * (size + padding)),
+                    size, size);
+                }
+        }
+    }
+
+    drawBlock(block, x, y, size, padding = 0) {
+        const tileColor = block.color - 1;
+        const tilesOfBlock = block.getTiles();
+        for(let i=0; i<block.height+block.offsetY; i++) {
+            for(let j=0; j<block.width+block.offsetX; j++) {
+                if (tilesOfBlock[i][j] == 0) continue;
+
+                this.ctx.drawImage(image,
+                    16 * tileColor, 0, 16, 16,
+                    x + ((size + padding) * j) + padding,
+                    y + ((size + padding) * i) + padding,
+                    size, size);
+                }
+        }
+    }
 }
 
 class Board {
@@ -174,14 +181,23 @@ class Board {
         this.tiles = Array(rows).fill().map(() => Array(cols).fill(0));
     }
 
+    isPositionValid(block) {
+        return true;
+    }
+
     overlap(block) {
         const tiles = block.getTiles();
-        for(let y=0;y<block.height+block.offsetY;y++) {
-            for(let x=0;x<block.width+block.offsetX;x++) {
+        for(let y=block.offsetY;y<block.height+block.offsetY;y++) {
+            for(let x=block.offsetX;x<block.width+block.offsetX;x++) {
                 if (tiles[y][x] == 0) continue;
-                const ty = block.y - y;
-                console.log(tiles, x, y, ty);
-                if (ty < 0 || this.tiles[ty][x + block.x] > 0) return true;
+                const tx = block.x + x;
+                const ty = block.y + y;
+                if (ty >= this.rows) continue;
+
+                if (tx < 0 || tx >= this.cols || ty < 0 || this.tiles[ty][tx] > 0) {
+                    console.log(ty, "?");
+                    return true;
+                }
             }
         }
         return false;
@@ -192,9 +208,15 @@ class Board {
         for(let y=0;y<block.height+block.offsetY;y++) {
             for(let x=0;x<block.width+block.offsetX;x++) {
                 if (tiles[y][x] == 0) continue;
-                this.tiles[block.y - y][x + block.x] = block.color;
+                const tx = block.x + x;
+                const ty = block.y + y;
+                //console.log("?", tx, ty, block.offsetX, block.offsetY);
+                if (ty >= this.rows) continue;
+
+                this.tiles[ty][tx] = block.color;
             }
         }
+        console.log(this.tiles);
     }
 }
 
@@ -207,6 +229,7 @@ class Block {
         while (this.tiles.length < this.tiles[0].length) {
             this.tiles.push(Array(this.tiles[0].length).fill().map(() => 0));
         }
+        //this.tiles.reverse();
 
         this.color = 0;
         this.allRotations = this.calculateRotation(tiles);
@@ -236,7 +259,6 @@ class Block {
 
     rotate(dir) {
         this.currentIndex = (this.allRotations.length + this.currentIndex + dir) % this.allRotations.length;
-        console.log("new: ", this.currentIndex);
         this.updateSize();
     }
 
@@ -262,6 +284,7 @@ class Block {
         this.width -= this.offsetX;
         this.height -= this.offsetY;
 
+        console.log("new: ", this.getTiles());
         console.log(this.offsetX, "-", this.offsetY, "-", this.width, "-", this.height);
     }
 
@@ -281,33 +304,3 @@ class Block {
         return getTop() - this.height;
     }
 }
-
-const game = new Game(ctx);
-game.draw();
-
-document.addEventListener('keydown', event => {
-    switch(event.key) {
-        case "ArrowRight":
-            game.moveBlock(1);
-            break
-        case "ArrowLeft":
-            game.moveBlock(-1);
-            break
-        case "ArrowDown":
-            game.fastDownBlock();
-            break
-        case "ArrowUp":
-            game.instantDownBlock();
-            break
-        case "z":
-            game.rotateBlock(1);
-            break
-        case "x":
-            game.rotateBlock(-1);
-            break
-    }
-})
-
-document.addEventListener("keypress", event => {
-
-})
