@@ -1,5 +1,6 @@
 const BLOCK_SIZE = 32;
 const PADDING = 2;
+const IMAGE_TILE_SIZE = 32;
 
 const ctx = canvas.getContext("2d");
 ctx.imageSmoothingEnabled = false;
@@ -24,6 +25,13 @@ class TetrisRenderer {
                 case "update":
                     this.render();
                     break
+                case "block_new":
+                    data.color = 1 + Math.floor(Math.random() * 7);
+                    break
+                case "block_move":
+                    break;
+                case "block_rotate:":
+                    break;
             }
         })
     }
@@ -55,17 +63,26 @@ class TetrisRenderer {
                 if (tileColor > 0) {
                     tileColor -= 1;
                     this.ctx.drawImage(this.skin,
-                        16 * tileColor, 0, 16, 16,
+                        IMAGE_TILE_SIZE * tileColor, 0, IMAGE_TILE_SIZE, IMAGE_TILE_SIZE,
                         x * size + PADDING, invertY + PADDING,
                         BLOCK_SIZE, BLOCK_SIZE);
                 }
             }
         }
 
+        // Current block
         this.drawTiles(block.getTiles(),
         block.x * size + PADDING,
         (board.rows - block.y - 1) * size + PADDING,
         BLOCK_SIZE, block.color - 1, PADDING);
+
+        // Curent block - end position
+        this.ctx.globalAlpha = 0.2;
+        this.drawTiles(block.getTiles(),
+        block.x * size + PADDING,
+        (board.rows - this.game.currentEndY - 1) * size + PADDING,
+        BLOCK_SIZE, block.color - 1, PADDING);
+        this.ctx.globalAlpha = 1.0;
     }
 
     drawTiles(tiles, x, y, size, color, padding = 0) {
@@ -74,7 +91,7 @@ class TetrisRenderer {
                 if (tiles[i][j] == 0) continue;
 
                 this.ctx.drawImage(this.skin,
-                    16 * color, 0, 16, 16,
+                    IMAGE_TILE_SIZE * color, 0, IMAGE_TILE_SIZE, IMAGE_TILE_SIZE,
                     x + (j * (size + padding)),
                     y - (i * (size + padding)),
                     size, size);

@@ -4,6 +4,8 @@ class Tetris {
         this.board = new Board(cols, rows);
         this.downTime = 0.3;
 
+        this.currentEndY;
+
         this.nextBlock();
     }
 
@@ -27,13 +29,24 @@ class Tetris {
     }
 
     moveBlock(move) {
-        //this.block.x = Math.min(Math.max(this.block.x + move, -this.block.offsetX), this.board.cols - this.block.width );
         this.block.x += move;
-        if (this.board.overlap(this.block)) this.block.x -= move;
+        if (this.board.overlap(this.block)) {
+            this.block.x -= move;
+        } else {
+            this.calculateCurrentEndY();
+            this.emit("block_move", this.block);
+        }
     }
 
     rotateBlock(dir) {
-        this.block.rotate(dir % 2);
+        const rotate = dir % 2;
+        this.block.rotate(rotate);
+        if (this.board.overlap(this.block)) {
+            this.block.rotate(-rotate);
+        } else {
+            this.calculateCurrentEndY();
+            this.emit("block_rotate", this.block);
+        }
     }
 
     downBlock() {
@@ -59,7 +72,8 @@ class Tetris {
     }
 
     instantDownBlock() {
-        while(this.downBlock());
+        //while(this.downBlock());
+        this.block.y = this.currentEndY;
         this.putBlockInboard();
     }
 
@@ -74,10 +88,12 @@ class Tetris {
             6: () => new Block([[0, 1, 0], [1, 1, 1]])  // T
         }
         const randomNumber = Math.floor(Math.random() * Object.keys(blocks).length);
-        const randomColor = 1 + Math.floor(Math.random() * 7);
 
         const newBlock = blocks[randomNumber]();
-        newBlock.color = randomColor;
+        newBlock.type = randomNumber;
+        newBlock.color = 1;
+
+        this.emit("block_new", newBlock);
         return newBlock;
     }
 
@@ -88,6 +104,16 @@ class Tetris {
         this.block.x = Math.min(Math.max(prevX, this.block.offsetX), this.board.cols - this.block.width);
 
         this.block.y = this.board.rows - 1;
+
+        this.calculateCurrentEndY();
+    }
+
+    calculateCurrentEndY() {
+        const prevY = this.block.y;
+        while(this.downBlock());
+
+        this.currentEndY = this.block.y;
+        this.block.y = prevY;
     }
 
     update(delta = 0.017) {
@@ -107,71 +133,6 @@ class Tetris {
         this.emit("update");
         setTimeout(() => requestAnimationFrame(this.update.bind(this)), 17);
     }
-    
-    draw() {
-        this.drawBlockInBoard(
-            this.block,
-            this.board,
-        )
-
-        this.drawTiles(this.block.getTiles(), PADDING, PADDING, BLOCK_SIZE, 1, PADDING);
-
-        // tmp: down block every x time
-        this.downTime -= deltaTime;
-        if (this.downTime <= 0) {
-            const stepDown = this.downBlock();
-            if (!stepDown) {
-                this.board.putBlock(this.block);
-                this.nextBlock();
-                // TODO
-            }
-
-            this.downTime = 10.5;
-        }
-
-        //requestAnimationFrame(this.draw.bind(this));
-        setTimeout(() => requestAnimationFrame(this.draw.bind(this)), 17);
-    }
-
-    drawBlockInBoard(block, board) {
-        const tiles = block.getTiles();
-        this.drawTiles(tiles,
-            block.x * BLOCK_SIZE + PADDING,
-            (board.rows - block.y - 1) * BLOCK_SIZE + PADDING,
-            BLOCK_SIZE,
-            block.color - 1,
-            PADDING);
-    }
-
-    drawTiles(tiles, x, y, size, color, padding = 0) {
-        for(let i=0; i<tiles.length; i++) {
-            for(let j=0; j<tiles[i].length; j++) {
-                if (tiles[i][j] == 0) continue;
-
-                this.ctx.drawImage(image,
-                    16 * color, 0, 16, 16,
-                    x + (j * (size + padding)),
-                    y - (i * (size + padding)),
-                    size, size);
-                }
-        }
-    }
-
-    drawBlock(block, x, y, size, padding = 0) {
-        const tileColor = block.color - 1;
-        const tilesOfBlock = block.getTiles();
-        for(let i=0; i<block.height+block.offsetY; i++) {
-            for(let j=0; j<block.width+block.offsetX; j++) {
-                if (tilesOfBlock[i][j] == 0) continue;
-
-                this.ctx.drawImage(image,
-                    16 * tileColor, 0, 16, 16,
-                    x + ((size + padding) * j) + padding,
-                    y + ((size + padding) * i) + padding,
-                    size, size);
-                }
-        }
-    }
 }
 
 class Board {
@@ -181,8 +142,8 @@ class Board {
         this.tiles = Array(rows).fill().map(() => Array(cols).fill(0));
     }
 
-    isPositionValid(block) {
-        return true;
+    canRotate(block, nextPosition) {
+        dsad
     }
 
     overlap(block) {

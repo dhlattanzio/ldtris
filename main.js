@@ -20,10 +20,10 @@ document.addEventListener('keydown', event => {
             tetris.instantDownBlock();
             break
         case "z":
-            tetris.rotateBlock(1);
+            tetris.rotateBlock(-1);
             break
         case "x":
-            tetris.rotateBlock(-1);
+            tetris.rotateBlock(1);
             break
         default:
             console.log(key);
