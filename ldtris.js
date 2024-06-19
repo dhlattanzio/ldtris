@@ -175,7 +175,7 @@ class LDTris {
                 // TODO
             }
 
-            this.downTime = 10.5;
+            this.downTime = 0.5;
         }
 
         //requestAnimationFrame(this.draw.bind(this));
